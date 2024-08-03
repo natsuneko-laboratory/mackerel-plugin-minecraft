@@ -1,0 +1,28 @@
+name: Release for mkr
+
+on:
+  push:
+    tags:
+      - "v**"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.22
+          cache: true
+          check-latest: true
+
+      - uses: goreleaser/goreleaser-action@v5
+        with:
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
