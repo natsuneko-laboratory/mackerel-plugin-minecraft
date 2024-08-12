@@ -92,14 +92,23 @@ func (mc MinecraftPlugin) FetchMetrics() (map[string]float64, error) {
 func (mc MinecraftPlugin) GraphDefinition() map[string]mp.Graphs {
 	prefix := mc.GetPrefix()
 
+	players := prefix + ".player"
+	data := prefix + ".data"
+
 	return map[string]mp.Graphs{
-		prefix: {
+		players: {
 			Label: "Minecraft Server Status",
 			Unit:  "integer",
 			Metrics: []mp.Metrics{
 				{Name: "max_players", Label: "Limit"},
 				{Name: "online_players", Label: "Current Players"},
 				{Name: "latency", Label: "Latency"},
+			},
+		},
+		data: {
+			Label: "Minecraft Server DataSize",
+			Unit:  "float",
+			Metrics: []mp.Metrics{
 				{Name: "overworld_size", Label: "Overworld DataSize"},
 				{Name: "nether_size", Label: "Nether DataSize"},
 				{Name: "the_end_size", Label: "TheEnd DataSize"},
