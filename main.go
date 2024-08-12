@@ -75,8 +75,8 @@ func (mc MinecraftPlugin) FetchMetrics() (map[string]float64, error) {
 		"max_players":    float64(res.Players.Max),
 		"online_players": float64(res.Players.Online),
 		"latency":        float64(res.Latency),
-		"overworldSize":  float64(overworldSize) / float64(1024),
-		"netherSize":     float64(netherSize) / float64(1024),
+		"overworld_size": float64(overworldSize) / float64(1024),
+		"nether_size":    float64(netherSize) / float64(1024),
 		"the_end_size":   float64(theEndSize) / float64(1024),
 	}, nil
 }
