@@ -30,6 +30,7 @@ func (mc MinecraftPlugin) FetchMetrics() (map[string]float64, error) {
 	var overworldSize int64 = 0
 	var netherSize int64 = 0
 	var theEndSize int64 = 0
+	var worldTotalSize int64 = 0
 
 	if mc.SaveData != "" {
 		path, _ := filepath2.Abs(mc.SaveData)
@@ -38,28 +39,34 @@ func (mc MinecraftPlugin) FetchMetrics() (map[string]float64, error) {
 		}
 
 		err = filepath2.Walk(path, func(data string, info os.FileInfo, err error) error {
-			if filepath2.Ext(data) == ".dat" {
-				rel, err := filepath2.Rel(path, data)
-				if err != nil {
-					return err
-				}
+			rel, err := filepath2.Rel(path, data)
+			if err != nil {
+				return err
+			}
 
+			if filepath2.Ext(data) == ".mca" {
 				// Dimension: -1 is Nether
-				if strings.HasPrefix(rel, "DIM-1") {
+				if strings.HasPrefix(rel, "DIM-1/region") {
 					netherSize += info.Size()
 					return nil
 				}
 
 				// Dimension: 1 is The End
-				if strings.HasPrefix(rel, "DIM1") {
+				if strings.HasPrefix(rel, "DIM1/region") {
 					theEndSize += info.Size()
 					return nil
 				}
 
 				// Dimension: 0 is Overworld
-				if strings.HasPrefix(rel, "data") {
+				if strings.HasPrefix(rel, "region") {
 					overworldSize += info.Size()
 					return nil
+				}
+			}
+
+			if filepath2.Ext(data) == ".dat" {
+				if rel == "level.dat" {
+					worldTotalSize = info.Size()
 				}
 			}
 
@@ -72,12 +79,13 @@ func (mc MinecraftPlugin) FetchMetrics() (map[string]float64, error) {
 	}
 
 	return map[string]float64{
-		"max_players":    float64(res.Players.Max),
-		"online_players": float64(res.Players.Online),
-		"latency":        float64(res.Latency),
-		"overworld_size": float64(overworldSize) / float64(1024),
-		"nether_size":    float64(netherSize) / float64(1024),
-		"the_end_size":   float64(theEndSize) / float64(1024),
+		"max_players":      float64(res.Players.Max),
+		"online_players":   float64(res.Players.Online),
+		"latency":          float64(res.Latency),
+		"overworld_size":   float64(overworldSize) / float64(1024),
+		"nether_size":      float64(netherSize) / float64(1024),
+		"the_end_size":     float64(theEndSize) / float64(1024),
+		"world_total_size": float64(worldTotalSize) / float64(1024),
 	}, nil
 }
 
@@ -95,6 +103,7 @@ func (mc MinecraftPlugin) GraphDefinition() map[string]mp.Graphs {
 				{Name: "overworld_size", Label: "Overworld DataSize"},
 				{Name: "nether_size", Label: "Nether DataSize"},
 				{Name: "the_end_size", Label: "TheEnd DataSize"},
+				{Name: "world_total_size", Label: "World Total DataSize"},
 			},
 		},
 	}
