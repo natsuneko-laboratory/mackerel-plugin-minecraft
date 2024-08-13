@@ -3,13 +3,10 @@ package main
 import (
 	"flag"
 	mp "github.com/mackerelio/go-mackerel-plugin"
-	"github.com/sch8ill/mclib"
-	"os"
-	filepath2 "path/filepath"
-	"strings"
+	"github.com/natsuneko-laboratory/mackerel-plugin-minecraft/minecraft"
 )
 
-// Mackerel Agent
+// MinecraftPlugin Mackerel Agent
 type MinecraftPlugin struct {
 	Prefix   string
 	Server   string
@@ -17,75 +14,36 @@ type MinecraftPlugin struct {
 }
 
 func (mc MinecraftPlugin) FetchMetrics() (map[string]float64, error) {
-	client, err := mclib.NewClient(mc.GetServerAddress())
+	status, err := minecraft.GetServerStatus(mc.GetServerAddress())
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := client.StatusPing()
+	data, err := minecraft.GetSaveDataStats(mc.SaveData)
 	if err != nil {
 		return nil, err
-	}
-
-	var overworldSize int64 = 0
-	var netherSize int64 = 0
-	var theEndSize int64 = 0
-	var worldTotalSize int64 = 0
-
-	if mc.SaveData != "" {
-		path, _ := filepath2.Abs(mc.SaveData)
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			return nil, err
-		}
-
-		err = filepath2.Walk(path, func(data string, info os.FileInfo, err error) error {
-			rel, err := filepath2.Rel(path, data)
-			if err != nil {
-				return err
-			}
-
-			if filepath2.Ext(data) == ".mca" {
-				// Dimension: -1 is Nether
-				if strings.HasPrefix(rel, "DIM-1/region") {
-					netherSize += info.Size()
-					return nil
-				}
-
-				// Dimension: 1 is The End
-				if strings.HasPrefix(rel, "DIM1/region") {
-					theEndSize += info.Size()
-					return nil
-				}
-
-				// Dimension: 0 is Overworld
-				if strings.HasPrefix(rel, "region") {
-					overworldSize += info.Size()
-					return nil
-				}
-			}
-
-			if filepath2.Ext(data) == ".dat" {
-				if rel == "level.dat" {
-					worldTotalSize = info.Size()
-				}
-			}
-
-			return nil
-		})
-
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return map[string]float64{
-		"max_players":      float64(res.Players.Max),
-		"online_players":   float64(res.Players.Online),
-		"latency":          float64(res.Latency),
-		"overworld_size":   float64(overworldSize),
-		"nether_size":      float64(netherSize),
-		"the_end_size":     float64(theEndSize),
-		"world_total_size": float64(worldTotalSize),
+		"max_players":           float64(status.MaxPlayers),
+		"online_players":        float64(status.OnlinePlayers),
+		"latency":               float64(status.Latency),
+		"overworld.size":        float64(data.Overworld.SizeInBytes),
+		"overworld.chunk.x_max": float64(data.Overworld.ChunkX.P * 32),
+		"overworld.chunk.x_min": float64(data.Overworld.ChunkX.N * 32),
+		"overworld.chunk.z_max": float64(data.Overworld.ChunkZ.P * 32),
+		"overworld.chunk.z_min": float64(data.Overworld.ChunkZ.N * 32),
+		"nether.size":           float64(data.Nether.SizeInBytes),
+		"nether.chunk.x_max":    float64(data.Nether.ChunkX.P * 32),
+		"nether.chunk.x_min":    float64(data.Nether.ChunkX.N * 32),
+		"nether.chunk.z_max":    float64(data.Nether.ChunkZ.P * 32),
+		"nether.chunk.z_min":    float64(data.Nether.ChunkZ.N * 32),
+		"the_end.size":          float64(data.EndWorld.SizeInBytes),
+		"the_end.chunk.x_max":   float64(data.EndWorld.ChunkX.P * 32),
+		"the_end.chunk.x_min":   float64(data.EndWorld.ChunkX.N * 32),
+		"the_end.chunk.z_max":   float64(data.EndWorld.ChunkZ.P * 32),
+		"the_end.chunk.z_min":   float64(data.EndWorld.ChunkZ.N * 32),
+		"world_total_size":      float64(0),
 	}, nil
 }
 
@@ -98,20 +56,32 @@ func (mc MinecraftPlugin) GraphDefinition() map[string]mp.Graphs {
 	return map[string]mp.Graphs{
 		players: {
 			Label: "Minecraft Server Status",
-			Unit:  "integer",
+			Unit:  mp.UnitFloat,
 			Metrics: []mp.Metrics{
-				{Name: "max_players", Label: "Limit"},
-				{Name: "online_players", Label: "Current Players"},
+				{Name: "max", Label: "Limit"},
+				{Name: "online", Label: "Current Players"},
 				{Name: "latency", Label: "Latency"},
 			},
 		},
 		data: {
 			Label: "Minecraft Server DataSize",
-			Unit:  "float",
+			Unit:  mp.UnitBytes,
 			Metrics: []mp.Metrics{
-				{Name: "overworld_size", Label: "Overworld DataSize"},
-				{Name: "nether_size", Label: "Nether DataSize"},
-				{Name: "the_end_size", Label: "TheEnd DataSize"},
+				{Name: "overworld.size", Label: "Overworld DataSize"},
+				{Name: "overworld.chunk.x_max", Label: "Overworld Chunk X Max"},
+				{Name: "overworld.chunk.x_min", Label: "Overworld Chunk X Min"},
+				{Name: "overworld.chunk.z_max", Label: "Overworld Chunk Z Max"},
+				{Name: "overworld.chunk.z_min", Label: "Overworld Chunk Z Min"},
+				{Name: "nether.size", Label: "Nether DataSize"},
+				{Name: "nether.chunk.x_max", Label: "Nether Chunk X Max"},
+				{Name: "nether.chunk.x_min", Label: "Nether Chunk X Min"},
+				{Name: "nether.chunk.z_max", Label: "Nether Chunk Z Max"},
+				{Name: "nether.chunk.z_min", Label: "Nether Chunk Z Min"},
+				{Name: "the_end.size", Label: "TheEnd DataSize"},
+				{Name: "the_end.chunk.x_max", Label: "TheEnd Chunk X Max"},
+				{Name: "the_end.chunk.x_min", Label: "TheEnd Chunk X Min"},
+				{Name: "the_end.chunk.z_max", Label: "TheEnd Chunk Z Max"},
+				{Name: "the_end.chunk.z_min", Label: "TheEnd Chunk Z Min"},
 				{Name: "world_total_size", Label: "World Total DataSize"},
 			},
 		},
