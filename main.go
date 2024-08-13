@@ -25,8 +25,8 @@ func (mc MinecraftPlugin) FetchMetrics() (map[string]float64, error) {
 	}
 
 	return map[string]float64{
-		"max_players":           float64(status.MaxPlayers),
-		"online_players":        float64(status.OnlinePlayers),
+		"max":                   float64(status.MaxPlayers),
+		"online":                float64(status.OnlinePlayers),
 		"latency":               float64(status.Latency),
 		"overworld.size":        float64(data.Overworld.SizeInBytes),
 		"overworld.chunk.x_max": float64(data.Overworld.ChunkX.P * 32),
@@ -50,13 +50,13 @@ func (mc MinecraftPlugin) FetchMetrics() (map[string]float64, error) {
 func (mc MinecraftPlugin) GraphDefinition() map[string]mp.Graphs {
 	prefix := mc.GetPrefix()
 
-	players := prefix + ".player"
+	player := prefix + ".player"
 	data := prefix + ".data"
 
 	return map[string]mp.Graphs{
-		players: {
+		player: {
 			Label: "Minecraft Server Status",
-			Unit:  mp.UnitFloat,
+			Unit:  mp.UnitInteger,
 			Metrics: []mp.Metrics{
 				{Name: "max", Label: "Limit"},
 				{Name: "online", Label: "Current Players"},
